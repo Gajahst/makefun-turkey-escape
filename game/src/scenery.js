@@ -150,14 +150,16 @@ function drawKitchen(ctx, camX, t) {
   ctx.strokeStyle = '#7e3d20'; ctx.lineWidth = 3;
   for (let x = ctrOff - 160; x < VIEW.w + 160; x += 160) { ctx.strokeRect(x + 8, 380, 144, 52); ctx.fillStyle = P.beak; ctx.fillRect(x + 74, 400, 12, 4); }
   // Recipe card pinned up, a little joke for the attentive
-  const card = wrap(330 - camX * 0.6, 1040) - 60;
-  ctx.fillStyle = '#fffaf0'; ctx.fillRect(card, 270, 90, 64);
-  ctx.fillStyle = P.danger; ctx.beginPath(); ctx.arc(card + 45, 274, 4, 0, Math.PI * 2); ctx.fill();
+  const card = wrap(630 - camX * 0.6, 1040) - 60;
+  // Pinned high on the wall, above the turkey's jump arc, so the joke stays readable.
+  const cy = 196;
+  ctx.fillStyle = '#fffaf0'; ctx.fillRect(card, cy, 90, 64);
+  ctx.fillStyle = P.danger; ctx.beginPath(); ctx.arc(card + 45, cy + 4, 4, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = P.ink; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText('ROAST TURKEY', card + 6, 292);
+  ctx.fillText('ROAST TURKEY', card + 6, cy + 22);
   ctx.font = '10px sans-serif';
-  ctx.fillText('1. catch turkey', card + 6, 308);
-  ctx.fillText('2. ...', card + 6, 322);
+  ctx.fillText('1. catch turkey', card + 6, cy + 38);
+  ctx.fillText('2. ...', card + 6, cy + 52);
   // Checkered floor
   ctx.fillStyle = '#efe6d8'; ctx.fillRect(0, GROUND_Y, VIEW.w, VIEW.h - GROUND_Y);
   ctx.fillStyle = '#b44a3a';

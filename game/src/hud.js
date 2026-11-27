@@ -51,12 +51,25 @@ export function drawHud(ctx, run, muted) {
   ctx.fillStyle = P.cream; ctx.textAlign = 'right'; ctx.fillText('EXIT', mx + mw, my - 9);
   const tx = mx + (meters / ESCAPE_METERS) * mw;
   const fxm = Math.max(0, meters - run.farmer.gap / 40);
-  const fx = mx + (fxm / ESCAPE_METERS) * mw;
-  ctx.fillStyle = P.danger; ctx.beginPath(); ctx.arc(fx, my + 1, 6, 0, Math.PI * 2); ctx.fill();
+  // Keep the farmer's marker visibly behind the turkey's, even when he is breathing down its neck.
+  const fx = Math.max(mx, Math.min(mx + (fxm / ESCAPE_METERS) * mw, tx - 16));
+  const behind = Math.max(0, Math.round(run.farmer.gap / 40));
+  // Farmer: a red hat-shaped pennant hanging under the bar
+  ctx.fillStyle = P.danger; ctx.strokeStyle = P.ink; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(fx - 6, my + 9); ctx.lineTo(fx + 6, my + 9); ctx.lineTo(fx, my - 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Turkey: a round marker sitting on the bar
   ctx.fillStyle = '#c9d6e3'; ctx.beginPath(); ctx.arc(tx, my + 1, 7, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = P.ink; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = P.cream; ctx.font = `10px ${FONT}`; ctx.textAlign = 'left';
-  ctx.fillText('you', tx + 9, my + 18); ctx.fillStyle = '#ff9a8f'; ctx.textAlign = 'left'; ctx.fillText('farmer', Math.max(mx - 4, fx - 44), my + 18);
+  ctx.font = `10px ${FONT}`;
+  // One label beside the turkey's marker: right of it when there is room, otherwise left of the farmer's.
+  const label = `you  ·  farmer ${behind} m behind`;
+  const lw = ctx.measureText(label).width;
+  const fits = tx + 9 + lw <= mx + mw;
+  ctx.textAlign = fits ? 'left' : 'right';
+  const lx = fits ? tx + 9 : fx - 9;
+  ctx.fillStyle = P.cream; ctx.fillText('you', fits ? lx : lx - ctx.measureText(label.slice(3)).width, my + 20);
+  ctx.textAlign = 'left'; ctx.fillStyle = '#ff9a8f';
+  ctx.fillText(label.slice(3), (fits ? lx : lx - lw) + ctx.measureText('you').width, my + 20);
 
   // Dash charge
   panel(ctx, 828, 12, 118, 48);
