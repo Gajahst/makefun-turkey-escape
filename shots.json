@@ -1,0 +1,6 @@
+[
+  { "name": "01-kitchen-chase.jpg", "query": "?shot=kitchen&seed=1" },
+  { "name": "02-title.jpg", "query": "?shot=title&seed=1" },
+  { "name": "03-farmyard-hide.jpg", "query": "?shot=hide&seed=1" },
+  { "name": "04-escaped.jpg", "query": "?shot=escaped&seed=1" }
+]
