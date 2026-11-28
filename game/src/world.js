@@ -19,8 +19,8 @@ export function createRun(seed) {
     entities: [],
     particles: [],
     pops: [],
-    corn: 0, nearMisses: 0, sneaks: 0, bonus: 0,
-    stage: 0, banner: { text: STAGES[0].name, t: 2.2 },
+    corn: 0, nearMisses: 0, sneaks: 0, bonus: 0, hits: 0, pies: 0, dashes: 0,
+    stage: 0, banner: { text: STAGES[0].name, sub: STAGES[0].warn, t: 2.2 },
     nextSpawnX: 700,
     shake: 0, flash: 0,
     outcome: null, endT: 0,
@@ -85,6 +85,18 @@ function spawn(run, wx) {
   return wx + rng.range(a, b) * T.baseSpeed;
 }
 
+// When the farmer is close and a crate, oven or hay bale blocks the way just ahead, he closes in
+// faster: the turkey is cornered and must jump, dash or hide now. Returns his extra speed.
+function farmerCornersTurkey(run) {
+  const tk = run.turkey, fm = run.farmer;
+  if (fm.gap > 200) { fm.cornered = false; return 0; }
+  const blocked = run.entities.some((e) => (e.type === 'crate' || e.type === 'oven' || (e.type === 'hay' && !e.used))
+    && e.wx > tk.wx && e.wx - tk.wx < 150);
+  if (blocked && !fm.cornered) pop(run, 'CORNERED!', '#e63b2e', tk.wx, tk.y + 110);
+  fm.cornered = blocked;
+  return blocked ? 60 : 0;
+}
+
 function pop(run, text, color, wx, y) { run.pops.push({ text, color, wx, y, t: 1.1 }); }
 
 function burst(run, wx, y, n, kind) {
@@ -102,6 +114,7 @@ function burst(run, wx, y, n, kind) {
 function hurt(run) {
   const tk = run.turkey;
   tk.lives -= 1;
+  run.hits++;
   tk.invuln = T.invulnTime;
   tk.hurtT = 0.4;
   tk.speed = T.minSpeed;
@@ -141,12 +154,25 @@ export function step(run, dt, c) {
   tk.hurtT = Math.max(0, tk.hurtT - dt);
   tk.dashCd = Math.max(0, tk.dashCd - dt);
 
-  // Hiding in a hay bale: the world holds still, the farmer searches, the clock runs out.
+  // Hiding in a hay bale: the world holds still and the farmer pokes through the hay.
+  // Slip out before his search meter fills and he loses you; stay too long and he finds you.
   if (tk.hidden) {
     tk.hideT += dt;
     fm.state = 'search';
     fm.alert = Math.max(0, fm.alert - dt * 0.5);
-    if (!c.duck || tk.hideT >= T.hideMax) {
+    if (tk.hideT >= T.hideMax) {
+      tk.hidden.used = true;
+      tk.hidden = null;
+      fm.state = 'chase';
+      pop(run, 'FOUND YOU!', '#e63b2e', tk.wx, 150);
+      run.events.push('spotted');
+      hurt(run);
+      fm.gap = 150; // he grabs, the turkey wriggles free with the farmer right behind
+      tk.speed = T.baseSpeed;
+      if (tk.lives <= 0) finish(run, 'caught');
+      return;
+    }
+    if (!c.duck) {
       tk.hidden.used = true;
       tk.hidden = null;
       fm.gap = Math.min(F.maxGap, fm.gap + 90);
@@ -161,7 +187,7 @@ export function step(run, dt, c) {
 
   // Speed: steer between a careful walk and an all-out sprint; a dash is a short burst.
   if (c.dashPressed && tk.dashCd === 0) {
-    tk.dashT = T.dashTime; tk.dashCd = T.dashCooldown;
+    tk.dashT = T.dashTime; tk.dashCd = T.dashCooldown; run.dashes++;
     burst(run, tk.wx - 20, tk.y + 20, 6, 'dust');
     run.events.push('dash');
   }
@@ -186,12 +212,16 @@ export function step(run, dt, c) {
   tk.ducking = c.duck && tk.onGround;
   if (c.duck && !tk.onGround) tk.vy -= T.gravity * dt; // fast-fall
 
-  // The farmer: faster each stage and when angry; lunges when close.
-  const farmerSpeed = F.baseSpeed + run.stage * F.catchUpPerStage + fm.alert * 70;
+  // The farmer: faster each stage and when angry; lunges when close, and corners a turkey
+  // that has to slow for a danger right in front of it.
+  const farmerSpeed = F.baseSpeed + run.stage * F.catchUpPerStage + fm.alert * 70 + farmerCornersTurkey(run);
   fm.gap = Math.min(F.maxGap, fm.gap + (speed - farmerSpeed) * dt);
   fm.alert = Math.max(0, fm.alert - dt * 0.04);
   if (fm.gap < 120) {
-    if (fm.state !== 'lunge') { fm.state = 'lunge'; run.events.push('spotted'); }
+    if (fm.state !== 'lunge') {
+      fm.state = 'lunge'; run.events.push('spotted');
+      pop(run, 'SPOTTED!', '#e63b2e', tk.wx - fm.gap * 0.6 - 60, 250);
+    }
   } else fm.state = 'chase';
   if (fm.gap <= 0) { finish(run, 'caught'); return; }
 
@@ -200,7 +230,7 @@ export function step(run, dt, c) {
   const next = STAGES[run.stage + 1];
   if (next && meters >= next.from) {
     run.stage++;
-    run.banner = { text: next.name, t: 2.4 };
+    run.banner = { text: next.name, sub: next.warn, t: 2.4 };
     run.events.push('stage');
   }
 
@@ -244,7 +274,7 @@ function updateEntities(run, dt) {
       continue;
     } else if (e.type === 'pie' && !e.taken) {
       if (overlaps(box, { l: e.wx - 20, r: e.wx + 20, b: e.y - 14, t: e.y + 14 })) {
-        e.taken = true;
+        e.taken = true; run.pies++;
         if (tk.lives < T.lives) { tk.lives++; pop(run, 'PIE! +1 LIFE', '#5fae4b', e.wx, e.y + 30); }
         else { run.bonus += 200; pop(run, 'PIE! +200', '#f5cd30', e.wx, e.y + 30); }
         burst(run, e.wx, e.y, 8, 'corn');

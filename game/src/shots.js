@@ -4,8 +4,10 @@
 
 import { PX_PER_METER } from './config.js';
 import { createRun, step, DOOR_X } from './world.js';
+import { GOALS, scoreGoals } from './goals.js';
 
 const TICK = 1 / 120;
+const goal = (id) => GOALS.find((g) => g.id === id);
 
 function runAt(seed, meters, stage) {
   const run = createRun(seed);
@@ -23,7 +25,11 @@ function advance(run, seconds, controls) {
 }
 
 const SCENES = {
-  title(game) { game.screen = 'title'; game.t = 2.5; game.best = 8975; },
+  title(game) {
+    game.screen = 'title'; game.t = 3.57; game.best = 8975;
+    game.earned = new Set(['kitchen', 'corn20', 'hide3', 'escape']);
+    game.goals = [goal('shaves8'), goal('hide3'), goal('nohit')];
+  },
 
   farm(game, seed) {
     const run = runAt(seed, 310, 0);
@@ -47,7 +53,7 @@ const SCENES = {
     const hay = { type: 'hay', wx: run.turkey.wx, w: 96, h: 58, used: false };
     run.entities.push(hay, { type: 'crate', wx: run.turkey.wx + 330, w: 46, h: 64 },
       { type: 'knifeFly', wx: run.turkey.wx + 520, y: 46, vx: -260, whooshed: true });
-    run.turkey.hidden = hay; run.turkey.hideT = 1.1; run.turkey.lives = 2;
+    run.turkey.hidden = hay; run.turkey.hideT = 1.5; run.turkey.lives = 2;
     run.farmer.gap = 170; run.corn = 9; run.nearMisses = 3;
     advance(run, 0.1, { duck: true });
     game.run = run; game.screen = 'play';
@@ -83,28 +89,31 @@ const SCENES = {
     Object.assign(run.turkey, { y: 128, vy: 160, onGround: false, lives: 2 });
     run.farmer.gap = 112; run.corn = 17; run.nearMisses = 7; run.farmer.alert = 0.6;
     advance(run, 0.1, { jump: true, fast: true });
-    run.pops.push({ text: 'CLOSE SHAVE! +25', color: '#fff4e0', wx: x - 30, y: 250, t: 0.9 });
+    // The SPOTTED! and CORNERED! calls above come from the run itself: the farmer is within
+    // lunge range and the oven blocks the way.
     game.run = run; game.screen = 'play';
   },
 
   caught(game, seed) {
     const run = runAt(seed, 1310, 2);
-    run.corn = 13; run.nearMisses = 5; run.sneaks = 1; run.bonus = 100;
+    run.corn = 13; run.nearMisses = 5; run.sneaks = 1; run.bonus = 100; run.hits = 3;
     run.turkey.lives = 0; run.farmer.gap = 0;
     run.outcome = 'caught'; run.farmer.state = 'grab';
     advance(run, 2, {});
     game.run = run; game.screen = 'end'; game.best = 3120;
+    game.results = scoreGoals(run, [goal('kitchen'), goal('corn20'), goal('hide3')], new Set());
   },
 
   escaped(game, seed) {
     const run = runAt(seed, 1800, 2);
     run.turkey.wx = DOOR_X;
-    run.corn = 22; run.nearMisses = 9; run.sneaks = 2; run.bonus = 200;
+    run.corn = 22; run.nearMisses = 9; run.sneaks = 2; run.bonus = 200; run.hits = 1; run.pies = 1;
     run.turkey.lives = 2;
     run.outcome = null;
     step(run, TICK, {}); // crossing the door line finishes the run as escaped
     advance(run, 2, {});
     game.run = run; game.screen = 'end'; game.newBest = true; game.best = 4400;
+    game.results = scoreGoals(run, [goal('escape'), goal('shaves8'), goal('nohit')], new Set(['kitchen']));
   },
 };
 

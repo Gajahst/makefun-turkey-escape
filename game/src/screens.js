@@ -38,7 +38,7 @@ function card(ctx, x, y, w, h) {
   ctx.lineWidth = 4; ctx.strokeStyle = P.ink; ctx.stroke();
 }
 
-export function drawTitle(ctx, t, mouse, best) {
+export function drawTitle(ctx, t, mouse, best, medals = 0, goals = []) {
   drawScenery(ctx, 'farm', t * 120, t);
   // The chase loops across the bottom of the title screen.
   const loop = (t * 140) % (VIEW.w + 500) - 250;
@@ -58,7 +58,8 @@ export function drawTitle(ctx, t, mouse, best) {
   ctx.restore();
 
   const play = button(ctx, VIEW.w / 2 - 120, 246, 240, 60, 'RUN FOR IT!', mouse, true);
-  card(ctx, VIEW.w / 2 - 320, 318, 640, 52);
+  // The controls sit on the dirt strip so the chase above them stays in plain view.
+  card(ctx, VIEW.w / 2 - 320, 452, 640, 52);
   ctx.save();
   ctx.font = `bold 14px ${FONT}`; ctx.textAlign = 'left';
   const pairs = [
@@ -66,17 +67,33 @@ export function drawTitle(ctx, t, mouse, best) {
     ['A / D', 'slow down / speed up'], ['Shift', 'dash   P pause   M mute'],
   ];
   pairs.forEach(([k, v], i) => {
-    const x = VIEW.w / 2 - 302 + (i % 2) * 310, y = 339 + Math.floor(i / 2) * 20;
+    const x = VIEW.w / 2 - 302 + (i % 2) * 310, y = 473 + Math.floor(i / 2) * 20;
     ctx.fillStyle = '#9b4f2c'; ctx.fillText(k, x, y);
     ctx.fillStyle = P.ink; ctx.fillText(v, x + 118, y);
   });
   ctx.restore();
   ctx.save();
-  ctx.font = `bold 16px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = P.cream;
+  ctx.font = `bold 14px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = P.cream;
   ctx.lineWidth = 4; ctx.strokeStyle = P.ink;
   const goal = `Run ${ESCAPE_METERS} m: farmyard, barn, kitchen, out the back door.     Best score: ${best}`;
-  ctx.strokeText(goal, VIEW.w / 2, 494); ctx.fillText(goal, VIEW.w / 2, 494);
+  ctx.strokeText(goal, VIEW.w / 2, 527); ctx.fillText(goal, VIEW.w / 2, 527);
   ctx.restore();
+
+  // The goals the next run deals, and how many medals are already won.
+  if (goals.length) {
+    card(ctx, 704, 24, 236, 150);
+    ctx.save();
+    ctx.textAlign = 'left'; ctx.fillStyle = '#9b4f2c'; ctx.font = `bold 13px ${FONT}`;
+    ctx.fillText('NEXT RUN GOALS', 720, 48);
+    ctx.textAlign = 'right'; ctx.fillStyle = P.ink;
+    ctx.fillText(`Medals ${medals.size}/${medals.total}`, 926, 48);
+    goals.forEach((g, i) => {
+      drawMedal(ctx, 732, 74 + i * 32, medals.has(g.id));
+      ctx.textAlign = 'left'; ctx.font = `bold 13px ${FONT}`; ctx.fillStyle = P.ink;
+      ctx.fillText(g.text, 754, 79 + i * 32);
+    });
+    ctx.restore();
+  }
   return [{ ...play, action: 'start' }];
 }
 
@@ -88,28 +105,31 @@ export function drawPause(ctx, mouse) {
   return [{ ...resume, action: 'resume' }, { ...quit, action: 'title' }];
 }
 
-export function drawEnd(ctx, run, mouse, best, newBest) {
+export function drawEnd(ctx, run, mouse, best, newBest, results = []) {
   const escaped = run.outcome === 'escaped';
   const a = Math.min(1, run.endT * 1.5);
   ctx.fillStyle = escaped ? `rgba(255,214,140,${0.55 * a})` : `rgba(40,16,10,${0.6 * a})`;
   ctx.fillRect(0, 0, VIEW.w, VIEW.h);
   if (run.endT < 0.5) return [];
 
+  const cx = 600; // the card sits right of centre, leaving room for the turkey's last pose
   if (escaped) {
-    title(ctx, 'ESCAPED!', 116, 80, '#f5cd30');
+    title(ctx, 'ESCAPED!', 100, 80, '#f5cd30');
     ctx.save(); ctx.font = `bold 21px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = P.ink;
-    ctx.fillText('Free bird! This year the family is having tofu.', VIEW.w / 2, 154); ctx.restore();
-    drawTurkey(ctx, 200, 330 - Math.abs(Math.sin(run.t * 6)) * 24, 'free', run.t, 1.6);
+    ctx.fillText('Free bird! This year the family is having tofu.', VIEW.w / 2, 138); ctx.restore();
+    drawTurkey(ctx, 165, 440 - Math.abs(Math.sin(run.t * 6)) * 24, 'free', run.t, 1.6);
   } else {
-    title(ctx, 'CAUGHT!', 116, 80, '#e63b2e');
+    title(ctx, 'CAUGHT!', 100, 80, '#e63b2e');
     ctx.save(); ctx.font = `bold 21px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = P.cream;
-    ctx.fillText('Into the sack. Preheat to 350.', VIEW.w / 2, 154); ctx.restore();
-    drawFarmer(ctx, 150, 400, 'grab', run.t, 1.3);
+    ctx.fillText('Into the sack. Preheat to 350.', VIEW.w / 2, 138); ctx.restore();
+    drawFarmer(ctx, 130, 440, 'grab', run.t, 1.3);
     // The turkey dangles from the farmer's fist, tail fan flapping in protest.
-    drawTurkey(ctx, 218, 290 + Math.sin(run.t * 8) * 4, 'hurt', run.t, 1.0);
+    drawTurkey(ctx, 198, 330 + Math.sin(run.t * 8) * 4, 'hurt', run.t, 1.0);
   }
 
-  card(ctx, VIEW.w / 2 - 170, 186, 340, 178);
+  card(ctx, cx - 290, 160, 580, 214);
+  ctx.save();
+  // Left column: how the run went.
   const rows = [
     ['Distance', `${distanceOf(run)} / ${ESCAPE_METERS} m`],
     ['Corn grabbed', `${run.corn}`],
@@ -117,21 +137,52 @@ export function drawEnd(ctx, run, mouse, best, newBest) {
     ['Sneaky hides', `${run.sneaks}`],
     ['Score', `${scoreOf(run)}`],
   ];
-  ctx.save();
   rows.forEach(([k, v], i) => {
-    const y = 218 + i * 28;
-    ctx.font = `bold 18px ${FONT}`; ctx.textAlign = 'left'; ctx.fillStyle = '#9b4f2c'; ctx.fillText(k, VIEW.w / 2 - 146, y);
-    ctx.textAlign = 'right'; ctx.fillStyle = P.ink; ctx.font = `bold ${i === 4 ? 22 : 18}px ${FONT}`; ctx.fillText(v, VIEW.w / 2 + 146, y);
+    const y = 192 + i * 30;
+    ctx.font = `bold 17px ${FONT}`; ctx.textAlign = 'left'; ctx.fillStyle = '#9b4f2c'; ctx.fillText(k, cx - 268, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = P.ink; ctx.font = `bold ${i === 4 ? 22 : 17}px ${FONT}`; ctx.fillText(v, cx - 26, y);
   });
   ctx.font = `bold 14px ${FONT}`; ctx.textAlign = 'center';
   ctx.fillStyle = newBest ? '#d9531e' : '#7e4a27';
-  ctx.fillText(newBest ? 'NEW BEST SCORE!' : `Best: ${best}`, VIEW.w / 2, 354);
+  ctx.fillText(newBest ? 'NEW BEST SCORE!' : `Best: ${best}`, cx - 147, 358);
+  // Right column: this run's three goals, ticked or not.
+  ctx.strokeStyle = 'rgba(58,36,20,0.25)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx, 176); ctx.lineTo(cx, 360); ctx.stroke();
+  ctx.textAlign = 'left'; ctx.fillStyle = '#9b4f2c'; ctx.font = `bold 15px ${FONT}`;
+  ctx.fillText('RUN GOALS', cx + 22, 192);
+  results.forEach((g, i) => {
+    const y = 228 + i * 44;
+    drawMedal(ctx, cx + 36, y - 6, g.met);
+    ctx.textAlign = 'left'; ctx.font = `bold 15px ${FONT}`; ctx.fillStyle = g.met ? P.ink : '#9a8670';
+    ctx.fillText(g.text, cx + 60, y);
+    if (g.isNew) { ctx.font = `bold 12px ${FONT}`; ctx.fillStyle = '#d9531e'; ctx.fillText('NEW MEDAL!', cx + 60, y + 16); }
+  });
   ctx.restore();
 
-  const again = button(ctx, VIEW.w / 2 - 170, 382, 200, 58, 'RUN AGAIN', mouse, true);
-  const menu = button(ctx, VIEW.w / 2 + 44, 382, 126, 58, 'Title', mouse, false);
+  const again = button(ctx, cx - 170, 390, 200, 58, 'RUN AGAIN', mouse, true);
+  const menu = button(ctx, cx + 44, 390, 126, 58, 'Title', mouse, false);
   ctx.save(); ctx.font = `bold 13px ${FONT}`; ctx.textAlign = 'center';
   ctx.fillStyle = escaped ? P.ink : P.cream;
-  ctx.fillText('R or Space to run again', VIEW.w / 2, 462); ctx.restore();
+  ctx.fillText('R or Space to run again, with three new goals', cx, 470); ctx.restore();
   return [{ ...again, action: 'restart' }, { ...menu, action: 'title' }];
+}
+
+// A round medal: gold with a star when earned, an empty dashed ring when not.
+export function drawMedal(ctx, x, y, earned) {
+  ctx.save();
+  ctx.lineWidth = 3;
+  if (earned) {
+    ctx.fillStyle = '#f5cd30'; ctx.strokeStyle = P.ink;
+    ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#d9531e'; ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 ? 4 : 9, ang = -Math.PI / 2 + i * Math.PI / 5;
+      ctx.lineTo(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
+    }
+    ctx.closePath(); ctx.fill();
+  } else {
+    ctx.strokeStyle = '#b39a7c'; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.restore();
 }

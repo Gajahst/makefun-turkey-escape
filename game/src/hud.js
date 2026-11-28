@@ -86,11 +86,15 @@ export function drawHud(ctx, run, muted) {
     const a = Math.min(1, run.banner.t * 2, (2.4 - run.banner.t) * 4 + 0.2);
     ctx.save();
     ctx.globalAlpha = Math.max(0, a);
-    ctx.fillStyle = P.hudBack; ctx.beginPath(); ctx.roundRect(VIEW.w / 2 - 170, 96, 340, 62, 14); ctx.fill();
+    ctx.fillStyle = P.hudBack; ctx.beginPath(); ctx.roundRect(VIEW.w / 2 - 230, 96, 460, 84, 14); ctx.fill();
     ctx.textAlign = 'center'; ctx.fillStyle = '#f5cd30'; ctx.font = `bold 13px ${FONT}`;
     ctx.fillText(`STAGE ${run.stage + 1} OF ${STAGES.length}`, VIEW.w / 2, 118);
     ctx.fillStyle = P.cream; ctx.font = `bold 26px ${FONT}`;
     ctx.fillText(run.banner.text, VIEW.w / 2, 147);
+    if (run.banner.sub) {
+      ctx.fillStyle = '#f7c59f'; ctx.font = `bold 14px ${FONT}`;
+      ctx.fillText(run.banner.sub, VIEW.w / 2, 168);
+    }
     ctx.restore();
   }
 }

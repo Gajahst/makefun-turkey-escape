@@ -8,6 +8,7 @@ import { createRun, step, scoreOf } from './world.js';
 import { drawRun } from './render.js';
 import { drawHud } from './hud.js';
 import { drawTitle, drawPause, drawEnd } from './screens.js';
+import { GOALS, pickGoals, scoreGoals } from './goals.js';
 import { stageShot } from './shots.js';
 
 const canvas = document.getElementById('game');
@@ -30,8 +31,14 @@ const audio = createAudio();
 
 function loadBest() { try { return Number(localStorage.getItem('gobble-getaway-best')) || 0; } catch { return 0; } }
 function saveBest(v) { try { localStorage.setItem('gobble-getaway-best', String(v)); } catch { /* private mode */ } }
+function loadMedals() { try { return new Set(JSON.parse(localStorage.getItem('gobble-getaway-medals') || '[]')); } catch { return new Set(); } }
+function saveMedals(set) { try { localStorage.setItem('gobble-getaway-medals', JSON.stringify([...set])); } catch { /* private mode */ } }
 
-const game = { screen: 'title', run: null, t: 0, best: loadBest(), newBest: false, buttons: [], runs: 0 };
+const game = {
+  screen: 'title', run: null, t: 0, best: loadBest(), newBest: false, buttons: [], runs: 0,
+  earned: loadMedals(), goals: pickGoals(seed + 7919), results: [],
+};
+const medalsView = () => ({ size: game.earned.size, total: GOALS.length, has: (id) => game.earned.has(id) });
 
 function startRun() {
   audio.unlock();
@@ -40,6 +47,14 @@ function startRun() {
   game.screen = 'play';
   game.newBest = false;
   audio.play('gobble');
+}
+
+// When a run ends: tick its goals, bank new medals and deal the next run's goals.
+function endRun(run) {
+  game.results = scoreGoals(run, game.goals, game.earned);
+  for (const r of game.results) if (r.met) game.earned.add(r.id);
+  saveMedals(game.earned);
+  game.goals = pickGoals(seed + (game.runs + 1) * 7919);
 }
 
 function doAction(action) {
@@ -97,6 +112,7 @@ function update(dt) {
     if (run.outcome) {
       const score = scoreOf(run);
       if (score > game.best) { game.best = score; game.newBest = true; saveBest(score); }
+      endRun(run);
       game.screen = 'end';
     }
     return;
@@ -113,11 +129,11 @@ function update(dt) {
 function render() {
   ctx.clearRect(0, 0, VIEW.w, VIEW.h);
   game.buttons = [];
-  if (game.screen === 'title') { game.buttons = drawTitle(ctx, game.t, input.mouse, game.best); return; }
+  if (game.screen === 'title') { game.buttons = drawTitle(ctx, game.t, input.mouse, game.best, medalsView(), game.goals); return; }
   drawRun(ctx, game.run);
   if (game.screen !== 'end') drawHud(ctx, game.run, audio.muted);
   if (game.screen === 'paused') game.buttons = drawPause(ctx, input.mouse);
-  if (game.screen === 'end') game.buttons = drawEnd(ctx, game.run, input.mouse, game.best, game.newBest);
+  if (game.screen === 'end') game.buttons = drawEnd(ctx, game.run, input.mouse, game.best, game.newBest, game.results);
 }
 
 function frame(now) {

@@ -9,7 +9,9 @@
 ![Kitchen chase](screenshots/01-kitchen-chase.jpg)
 
 - Three stages that get harder: the Farmyard, the Big Barn, the Kitchen, then out the back door (1800 m).
-- Jump (hold for higher), duck, speed up or slow down, dash, and hide in hay bales while the farmer searches.
+- Jump (hold for higher), duck, speed up or slow down, dash, and hide in hay bales while the farmer searches. Stay hidden too long and his search meter fills: FOUND YOU!
+- The farmer shouts SPOTTED! when he lunges and closes in faster when a crate or oven corners you.
+- Every run deals three goals; meet one and its medal is yours for good (10 medals in all), so there is always a reason to run again.
 - Ovens that heat up and blast flame, flying and falling carving knives with warning marks, crates.
 - Corn for points, close shaves for bonus, pumpkin pie for an extra life.
 - HUD with lives, score, distance and a route map showing you and the farmer; caught and escaped end screens with restart and best score.

@@ -35,11 +35,11 @@ export const FARMER = {
 
 // Stages by distance (meters). Each changes the scenery and the danger mix.
 export const STAGES = [
-  { id: 'farm',    name: 'The Farmyard', from: 0,    spawnGap: [1.25, 1.9],
+  { id: 'farm',    name: 'The Farmyard', from: 0,    spawnGap: [1.25, 1.9], warn: 'Crates, hay to hide in, the odd thrown knife',
     mix: { crate: 3, hay: 3, knifeFly: 1, corn: 4 } },
-  { id: 'barn',    name: 'The Big Barn', from: 550,  spawnGap: [1.0, 1.6],
+  { id: 'barn',    name: 'The Big Barn', from: 550,  spawnGap: [1.0, 1.6], warn: 'Knives drop from the rafters. The farmer speeds up',
     mix: { crate: 2, hay: 2, knifeFly: 2, knifeDrop: 2, oven: 1, corn: 3, pie: 0.5 } },
-  { id: 'kitchen', name: 'The Kitchen',  from: 1150, spawnGap: [0.85, 1.35],
+  { id: 'kitchen', name: 'The Kitchen',  from: 1150, spawnGap: [0.85, 1.35], warn: 'Hot ovens, flying knives, almost nowhere to hide',
     mix: { oven: 3, knifeFly: 3, knifeDrop: 3, hay: 1, corn: 3, pie: 0.7 } },
 ];
 

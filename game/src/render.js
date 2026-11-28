@@ -55,8 +55,10 @@ function drawFarmerOrArrow(ctx, run) {
   const fm = run.farmer;
   const tk = run.turkey;
   const caught = run.outcome === 'caught';
-  // Once the end card is up, the caught scene is drawn by screens.js instead.
+  // Once the end card is up, the caught scene is drawn by screens.js instead,
+  // and after an escape the farmer is left behind, off the end card.
   if (caught && run.endT > 0.5) return;
+  if (run.outcome === 'escaped' && run.endT > 0.5) return;
   // On screen the farmer runs gap*0.6 behind the turkey; at a big gap only an arrow shows.
   const fx = caught ? T.x - 70 + Math.min(1, run.endT * 3) * 10 : T.x - 80 - fm.gap * 0.6;
   if (fx > -40) {
@@ -97,9 +99,15 @@ export function drawRun(ctx, run) {
     drawTurkey(ctx, hx + 6, GROUND_Y - 22 + Math.sin(run.t * 3) * 3, 'duck', run.t);
     ctx.restore();
     drawHay(ctx, hx, GROUND_Y, tk.hidden.w, tk.hidden.h, true, run.t);
-    const left = Math.max(0, 1 - tk.hideT / T.hideMax);
-    ctx.fillStyle = P.hudBack; ctx.fillRect(hx - 40, GROUND_Y - 92, 80, 8);
-    ctx.fillStyle = left > 0.3 ? P.good : P.danger; ctx.fillRect(hx - 40, GROUND_Y - 92, 80 * left, 8);
+    // The farmer's search meter: when it fills, he finds the turkey.
+    const found = Math.min(1, tk.hideT / T.hideMax);
+    ctx.save();
+    ctx.fillStyle = P.hudBack; ctx.beginPath(); ctx.roundRect(hx - 62, GROUND_Y - 112, 124, 34, 8); ctx.fill();
+    ctx.fillStyle = P.cream; ctx.font = 'bold 11px "Trebuchet MS", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(found > 0.7 ? 'HE IS CLOSE! GO!' : 'FARMER SEARCHING', hx, GROUND_Y - 99);
+    ctx.fillStyle = 'rgba(255,244,224,0.25)'; ctx.fillRect(hx - 52, GROUND_Y - 92, 104, 8);
+    ctx.fillStyle = found > 0.7 ? P.danger : '#f5cd30'; ctx.fillRect(hx - 52, GROUND_Y - 92, 104 * found, 8);
+    ctx.restore();
   } else if (!(run.outcome === 'escaped' && run.endT > 0.6) && !(run.outcome === 'caught' && run.endT > 0.5)) {
     const blink = tk.invuln > 0 && Math.floor(run.t * 16) % 2 === 0;
     drawShadow(ctx, T.x, GROUND_Y, 26 - Math.min(16, tk.y / 10));
